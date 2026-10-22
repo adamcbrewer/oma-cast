@@ -78,11 +78,17 @@ PanelWindow {
     window.actionPanelOpen = false
     window.historyIndex = -1
     window.rebuild(true)
-    Qt.callLater(function() { keyCatcher.forceActiveFocus() })
+    Qt.callLater(function() { queryText.forceActiveFocus() })
+  }
+
+  onActionPanelOpenChanged: {
+    if (window.actionPanelOpen) keyCatcher.forceActiveFocus()
+    else queryText.forceActiveFocus()
   }
 
   onShownChanged: {
     if (window.shown) return
+    Qt.inputMethod.reset()
     window.actionPanelOpen = false
     var seconds = Number(window.general.popToRootTimeout)
     if (!(seconds > 0)) window.popToRoot()
@@ -386,9 +392,8 @@ PanelWindow {
       }
     }
 
-    if (Util.editsFilter(event, window.query)) { window.setQuery(Util.editedFilter(event, window.query)); return true }
+    if (event.modifiers === Qt.ControlModifier && key === Qt.Key_U) { window.setQuery(""); return true }
     if (key === Qt.Key_Backspace && !window.query && !window.atRoot) { window.pop(); return true }
-    if (window.isTyping(event)) { window.setQuery(window.query + event.text); return true }
     return false
   }
 
@@ -424,12 +429,11 @@ PanelWindow {
     borderSpec: window.borderSpec
     clip: true
 
-    MouseArea { anchors.fill: parent; onClicked: { window.actionPanelOpen = false; keyCatcher.forceActiveFocus() } }
+    MouseArea { anchors.fill: parent; onClicked: { window.actionPanelOpen = false; queryText.forceActiveFocus() } }
 
     Item {
       id: keyCatcher
       anchors.fill: parent
-      focus: true
       Keys.priority: Keys.BeforeItem
       Keys.onPressed: function(event) { if (window.handleKey(event)) event.accepted = true }
     }
@@ -470,38 +474,26 @@ PanelWindow {
         }
       }
 
-      Text {
+      QueryInput {
         id: queryText
-        textFormat: Text.PlainText
         anchors.left: lead.right
         anchors.leftMargin: window.px(12)
         anchors.right: parent.right
         anchors.rightMargin: window.px(20)
         anchors.verticalCenter: parent.verticalCenter
-        text: window.query || window.placeholder
+        text: window.query
+        placeholderText: window.placeholder
         color: window.look.foreground
-        opacity: window.query ? 1 : 0.45
+        accentColor: window.look.accent
+        selectionColor: window.look.accent
+        selectedTextColor: window.look.background
+        enabled: !window.actionPanelOpen
         font.family: window.look.fontFamily
         font.pixelSize: Math.round(Style.font.heading * 1.15 * window.zoom)
-        elide: Text.ElideLeft
-      }
-
-      Rectangle {
-        width: Math.max(1, Style.space(2))
-        height: queryText.font.pixelSize + Style.space(4)
-        anchors.verticalCenter: parent.verticalCenter
-        x: queryText.x + (window.query ? Math.min(queryText.contentWidth, queryText.width) + Style.space(1) : 0)
-        color: window.look.accent
-        visible: window.shown && !window.actionPanelOpen
-
-        SequentialAnimation on opacity {
-          running: window.shown
-          loops: Animation.Infinite
-          NumberAnimation { to: 1; duration: 0 }
-          PauseAnimation { duration: 530 }
-          NumberAnimation { to: 0; duration: 0 }
-          PauseAnimation { duration: 530 }
-        }
+        focus: true
+        onTextEdited: window.setQuery(text)
+        Keys.priority: Keys.BeforeItem
+        Keys.onPressed: function(event) { event.accepted = window.handleKey(event) }
       }
 
       Rectangle {
