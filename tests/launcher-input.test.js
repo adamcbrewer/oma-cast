@@ -18,20 +18,26 @@ function body(signature) {
 
 function harness() {
   let next = 100
-  const Qt = new Proxy({ NoModifier: 0, ControlModifier: 1, ShiftModifier: 2, AltModifier: 4 }, {
+  const Qt = new Proxy({ NoModifier: 0, ControlModifier: 1, ShiftModifier: 2, AltModifier: 4, MetaModifier: 8 }, {
     get(target, key) { if (!(key in target)) target[key] = next++; return target[key] }
   })
   const events = []
   const window = {
     query: "12+34", atRoot: true, view: { kind: "root" }, actionPanelOpen: false,
-    historyIndex: -1, selectedIndex: 0,
+    historyIndex: -1, selectedIndex: 0, argFocus: -1, argDefs: [], vim: false,
     setQuery(query) { this.query = query },
     pop: () => events.push("pop"), move: n => events.push(["move", n]),
     nextSelectable: () => 0, rebuild: reset => events.push(["rebuild", reset]),
     toggleActionPanel: () => events.push("actions"),
+    toggleDropdown: () => events.push("dropdown"),
     backend: { callSync: () => ({ ok: true, data: ["firefox", "12+34"] }) }
   }
   const context = vm.createContext({ Qt, window, event: null })
+  for (const name of ["direction", "isActionPanelKey"]) {
+    const start = source.indexOf("function " + name + "(")
+    const end = source.indexOf("\n  }", start) + 4
+    window[name] = vm.runInContext("(" + source.slice(start, end) + ")", context)
+  }
   window.recallHistory = direction => {
     context.direction = direction
     return vm.runInContext(body("function recallHistory(direction)"), context)
@@ -72,8 +78,45 @@ test("list navigation and action shortcuts retain priority over text editing", (
   assert.equal(h.press("Up"), true)
   assert.equal(h.press("Down"), true)
   assert.equal(h.press("K", h.Qt.ControlModifier), true)
-  assert.deepEqual(h.events, [["move", -1], ["move", 1], "actions"])
+  assert.equal(h.press("P", h.Qt.ControlModifier), true)
+  assert.deepEqual(h.events, [["move", -1], ["move", 1], "actions", "dropdown"])
   assert.equal(h.window.query, "12+34")
+})
+
+test("vim navigation keeps Alt+K for actions while query arrows remain native", () => {
+  const h = harness()
+  h.window.vim = true
+  assert.equal(h.press("J", h.Qt.ControlModifier), true)
+  assert.equal(h.press("K", h.Qt.ControlModifier), true)
+  assert.equal(h.press("K", h.Qt.AltModifier), true)
+  assert.equal(h.press("Left"), false)
+  assert.deepEqual(h.events, [["move", 1], ["move", -1], "actions"])
+})
+
+test("popups and arguments transfer focus away from the query and back", () => {
+  const calls = []
+  const window = { argFocus: -1 }
+  const context = vm.createContext({
+    window,
+    queryText: { forceActiveFocus: () => calls.push("query") },
+    keyCatcher: { forceActiveFocus: () => calls.push("keys") }
+  })
+  const expression = source.match(/readonly property bool queryInputActive: ([^\n]*(?:\n    &&[^\n]*)*)/)[1]
+  function focus() {
+    window.queryInputActive = vm.runInContext(expression, context)
+    vm.runInContext(body("function focusInput()"), context)
+  }
+  for (const [key, active, inactive] of [
+    ["actionPanelOpen", true, false], ["dropdownOpen", true, false],
+    ["toastPanelOpen", true, false], ["aboutOpen", true, false],
+    ["alert", {}, null], ["argFocus", 0, -1]
+  ]) {
+    window[key] = active
+    focus()
+    window[key] = inactive
+    focus()
+  }
+  assert.deepEqual(calls, Array(6).fill(["keys", "query"]).flat())
 })
 
 test("history recall survives cursor movement and editing exits history browsing", () => {
