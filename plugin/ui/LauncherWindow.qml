@@ -16,6 +16,21 @@ PanelWindow {
   required property var backend
   property var appLibrary: null
   property bool shown: false
+  readonly property bool busy: window.shown && window.backend.loading
+  readonly property int loadingFeedbackDelay: 500
+  property bool loadingVisible: false
+
+  onBusyChanged: {
+    window.loadingVisible = false
+    if (window.busy) loadingDelay.restart()
+    else loadingDelay.stop()
+  }
+
+  Timer {
+    id: loadingDelay
+    interval: window.loadingFeedbackDelay
+    onTriggered: window.loadingVisible = window.busy
+  }
 
   signal dismissRequested()
 
@@ -854,22 +869,6 @@ PanelWindow {
         height: Style.spacing.hairline
         color: Util.alpha(window.look.foreground, 0.12)
         visible: !window.compact
-
-        Rectangle {
-          id: loader
-          visible: window.backend.loading && window.shown
-          height: Math.max(2, Style.space(2))
-          width: parent.width / 4
-          anchors.verticalCenter: parent.verticalCenter
-          color: window.look.accent
-          NumberAnimation on x {
-            running: loader.visible
-            loops: Animation.Infinite
-            from: -loader.width
-            to: header.width
-            duration: 900
-          }
-        }
       }
     }
 
@@ -978,9 +977,10 @@ PanelWindow {
           color: window.toast && window.toast.style === "failure" ? "#e06c75" : window.look.accent
         }
         Text {
+          id: footerStatus
           anchors.verticalCenter: parent.verticalCenter
           textFormat: Text.PlainText
-          text: window.toast ? window.toast.title : window.view.title
+          text: window.toast ? window.toast.title : window.loadingVisible ? "Loading…" : window.view.title
           color: window.look.foreground
           opacity: window.toast ? 0.9 : 0.6
           elide: Text.ElideRight

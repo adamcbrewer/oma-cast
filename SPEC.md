@@ -660,12 +660,12 @@ Each running menu-bar command owns one SNI item (ksni):
   - search field with placeholder "Search for apps and commands…" (each view sets its own)
   - inline argument pills after the measured text width
   - optional right-side dropdown accessory (Ctrl+P)
-  - a 2 px loading bar under the header
+  - a static divider under the header; loading feedback stays in the footer [D, 2026-10-28]
 - **Body:** sectioned list.
   - Row: icon 22 px, title, subtitle in secondary colour, and right-aligned accessories in this order: tags/text/date, alias badge, hotkey glyphs, type label ("Application", "Command", "Quicklink", …).
   - Master-detail split for list detail (~40/60). Grid view (columns 1–8). Empty state with icon, title and description.
 - **Footer (42 px):**
-  - left: current context icon + title, or the active toast (style icon, title, message)
+  - left: current context icon + title, or the active toast (style icon, title, message); show quiet "Loading…" after 500 ms of visible loading, with toast priority and reset on hide [D, 2026-10-28]
   - right: primary action title + ↵, a separator, "Actions" + Ctrl+K
 - **Action panel (Ctrl+K):** popover anchored bottom-right, with its own search field and sections (primary, then copy, configure, deeplink, delete).
   - Each row shows its shortcut.
