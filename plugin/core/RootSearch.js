@@ -151,7 +151,7 @@ function isEnabled(candidate, ctx) {
 }
 
 function rankOptions(ctx) {
-  return { sensitivity: ctx.sensitivity || "medium", nowMs: ctx.nowMs }
+  return { sensitivity: ctx.sensitivity || "medium", nowMs: ctx.nowMs, fleaHits: ctx.fleaHits || null }
 }
 
 function fallbackRows(query) {

@@ -7,6 +7,7 @@ import "core/Paths.js" as Paths
 import "core/Log.js" as Log
 import "core/Schema.js" as Schema
 import "core/Ranker.js" as Ranker
+import "core/FleaSearch.js" as FleaSearch
 import "core/Frecency.js" as Frecency
 import "core/OmarchyMenu.js" as OmarchyMenu
 import "core/RootSearch.js" as RootSearch
@@ -35,7 +36,7 @@ Item {
   property var candidates: []
   property var candidatesById: ({})
   property int candidatesRevision: 0
-  readonly property bool loading: menuSource.loading || agentLauncher.checking
+  readonly property bool loading: menuSource.loading || agentLauncher.checking || nativeSearch.pending !== null
   // Bumped when exchange rates or zone offsets arrive, so an open
   // calculator row re-evaluates.
   readonly property int calculatorRevision: (calculatorData.rates ? 1 : 0) + calculatorData.ratesFetchedAt + calculatorData.zonesAt
@@ -45,6 +46,25 @@ Item {
 
   function call(method, data) { return Rpc.call(backend.registry, method, data) }
   function callSync(method, data) { return Rpc.callSync(backend.registry, method, data) }
+  function cancelSearch() { nativeSearch.cancel() }
+
+  function searchAsync(data, callback) {
+    nativeSearch.cancel()
+    var query = String(data && data.query || "").trim()
+    var view = data && data.view
+    if (!query || (view && view.kind !== "root")) {
+      callback(backend.callSync("rootSearch.search", data))
+      return
+    }
+    nativeSearch.search(Ranker.transliterate(query.toLowerCase()), backend.searchContext().sensitivity, function(matches) {
+      callback(backend.callSync("rootSearch.search", Object.assign({}, data, { fleaHits: matches })))
+    })
+  }
+
+  NativeSearch {
+    id: nativeSearch
+    onFailed: function(message) { backend.log("warning", "search", message) }
+  }
   function subscribe(method, callback) { return Rpc.subscribe(backend.registry, method, callback) }
 
   function emit(method, data) {
@@ -78,8 +98,12 @@ Item {
     for (var b = 0; b < RootSearch.BUILTINS.length; b++) next.push(RootSearch.builtinCandidate(RootSearch.BUILTINS[b]))
     var byId = ({})
     for (var j = 0; j < next.length; j++) byId[next[j].id] = next[j]
+    var entries = FleaSearch.entries(next, Ranker.transliterate)
+    nativeSearch.cancel()
     backend.candidates = next
     backend.candidatesById = byId
+    nativeSearch.ids = next.map(function(c) { return c.id })
+    nativeSearch.entries = entries
     backend.candidatesRevision++
   }
 
@@ -386,6 +410,7 @@ Item {
         var query = String(data && data.query || "")
         var view = data && data.view
         var ctx = backend.searchContext()
+        if (data && data.fleaHits) ctx.fleaHits = data.fleaHits
         var sections
         if (view && view.kind === "menu") sections = RootSearch.submenuSections(backend.candidates, view.menuId, query, ctx, backend.deps)
         else if (view && view.kind === "calculator-history") sections = RootSearch.historySections(calculatorStore.doc.history, query, ctx.nowMs, Calculator.filterHistory)
