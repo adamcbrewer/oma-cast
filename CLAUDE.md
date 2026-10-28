@@ -120,7 +120,7 @@ Works:
   - **Ctrl+T** opens the toast's actions (Copy Error Message on failures, Undo after Disable Command). **Ctrl+Shift+K** opens the About panel for the selected row.
   - **Argument pills:** "Search Google" / "Search DuckDuckGo" take a query in a pill after the search text (Tab in, Shift+Tab out).
   - **Alerts:** Shut Down, Restart, Log Out and Delete All Entries ask first (↵ confirms, Esc cancels). `oma-cast run` skips the alert.
-- **Feedback:** toasts in the footer, a HUD through Omarchy's OSD when the window closes, and a 2 px loading bar while guards and providers refresh (on every open, about 250 ms in the background).
+- **Feedback:** toasts in the footer and a HUD through Omarchy's OSD when the window closes; static footer "Loading…" appears only after 500 ms of visible loading, yields to toasts and resets on hide. The header divider stays still.
 - **Window behaviour:**
   - The `escapeKeyBehavior` setting works both ways.
   - Pop-to-root runs after `popToRootTimeout`.
