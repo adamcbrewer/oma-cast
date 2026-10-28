@@ -244,6 +244,14 @@ Item {
     return candidate.kind === "omarchy-link" ? candidate.target : candidate.menuId
   }
 
+  function openMenu(item) {
+    if (item.provider && !OmarchyMenu.PROVIDERS[item.provider]) {
+      backend.summonPlugin("omarchy.menu", JSON.stringify({ menu: item.id }))
+      return { close: true }
+    }
+    return { push: { kind: "menu", menuId: item.id, title: item.label } }
+  }
+
   function performAction(data) {
     var id = String(data && data.id || "")
     var action = String(data && data.action || "open")
@@ -265,12 +273,12 @@ Item {
           return { close: true }
         case "omarchy-menu":
           backend.recordVisit(id, query)
-          return { push: { kind: "menu", menuId: candidate.menuId, title: candidate.title } }
+          return backend.openMenu(menuSource.tree.items[candidate.menuId])
         case "omarchy-link":
           backend.recordVisit(id, query)
           var target = menuSource.tree.items[candidate.target]
           if (!target) return { toast: { style: "failure", title: "Menu " + candidate.target + " not found" } }
-          return { push: { kind: "menu", menuId: target.id, title: target.label } }
+          return backend.openMenu(target)
         case "builtin":
           if (candidate.run.url) {
             var values = (data && data.arguments) || {}
