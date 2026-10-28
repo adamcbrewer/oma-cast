@@ -23,7 +23,7 @@ Spec legend: **[O]** observed in Raycast, **[I]** inferred, **[D]** design decis
 2. **Never call `*.raycast.com`.** No store, account, sync, telemetry or currency APIs. Build extensions from a local `raycast/extensions` clone.
 3. **No telemetry.** No Sentry, no PostHog.
 4. **No embedded AI features.** The fork's user-authorized exception is an explicit hand-off of root-search text to Omarchy's existing default-agent terminal launcher (SPEC §2.0). No model API, credential handling or automatic submission while typing. Other built-ins remain non-AI.
-5. **Port the root-search ranker exactly** from `reference/02-backend.md §4.2–4.5`. Do not substitute fzf, nucleo or fuse.js.
+5. **Port the root-search ranker exactly** from `reference/02-backend.md §4.2–4.5`. Do not substitute fzf, nucleo or fuse.js. The user-authorized flea-search matcher in SPEC §2.0 is the matching exception; personalization still uses this ranker.
 
 ## How to work
 

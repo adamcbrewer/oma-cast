@@ -52,10 +52,18 @@ Requires Omarchy 4 (Hyprland 0.56+, `omarchy-shell`) and `socat`, which Omarchy 
 ```sh
 git clone https://github.com/typecraft-dev/oma-cast.git
 cd oma-cast
-bin/oma-cast install          # link the plugin into omarchy-shell and the CLI into ~/.local/bin
+bin/oma-cast install          # build search if cargo is installed, then link and enable the plugin
 oma-cast setup hyprland       # bind Alt+Space
 oma-cast doctor               # check everything is wired up
 ```
+
+With Rust (`cargo`) installed, installation builds the small **flea-search** helper locally. It matches titles,
+alternate names, subtitles and keywords outside the shell's UI thread and tolerates transposed or missing letters.
+Aliases, favorites, learned terms and frecency stay in oma-cast's existing ranker. Without Rust, installation keeps
+the built-in matcher; install Rust and run `oma-cast build-search`, then `oma-cast reload`, to enable acceleration.
+Run `tests/native-transport.sh` on Omarchy to check the real native transport, process failures and timeout fallback.
+No binary download or background system service is required. If the helper fails or times out, search falls back
+to the built-in matcher until the plugin reloads. The synchronous `rootSearch.search` IPC stays compatible.
 
 Press **Alt+Space**. Super+Space stays the Omarchy menu. You can change the launcher binding in `~/.config/hypr/oma-cast.lua`.
 
