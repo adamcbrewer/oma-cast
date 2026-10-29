@@ -95,12 +95,14 @@ function appWindowKeys(entry) {
 }
 
 // Keys for one window class. Chromium-based browsers build a web app's class
-// off its URL: chrome-web.whatsapp.com__-Default -> web.whatsapp.com.
+// off its URL and the profile directory: chrome-web.whatsapp.com__-Default ->
+// web.whatsapp.com. The profile is whatever the user launched with ("Default",
+// "Profile 1" -> Profile_1), so the last dash segment is dropped, not matched.
 function windowClassKeys(windowClass) {
   var cls = String(windowClass || "").toLowerCase()
   var keys = [cls]
   var url = cls.replace(/^(brave|chrome|chromium)-/, "")
-  if (url !== cls) keys.push(webappKey(url.replace(/-default$/, "").replace(/__/g, "/").replace(/_/g, "/")))
+  if (url !== cls) keys.push(webappKey(url.replace(/-[^-]*$/, "").replace(/__/g, "/").replace(/_/g, "/")))
   return keys
 }
 
