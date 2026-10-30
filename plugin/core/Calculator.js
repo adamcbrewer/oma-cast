@@ -480,7 +480,11 @@ function num(n, unit) {
   if (!isFinite(n)) throw new CalcError("non-finite number")
   return { type: "num", n: n, unit: unit || null, pct: false }
 }
-function pct(fraction) { var v = num(fraction); v.pct = true; return v }
+function pct(fraction) {
+  var v = num(fraction)
+  v.pct = true
+  return v
+}
 function date(ms, hasTime) {
   if (!isFinite(new Date(ms).getTime())) throw new CalcError("date out of range")
   return { type: "date", ms: ms, hasTime: !!hasTime }
@@ -664,10 +668,17 @@ function callFunction(name, args, state) {
   var variadic = name === "min" || name === "max" || name === "hypot"
   var optional = name === "log" || name === "round"
   var count = name === "pow" ? 2 : 1
-  if (args.length < count || (!variadic && args.length > (optional ? 2 : count))) throw new CalcError("bad argument count")
+  var maxCount = optional ? 2 : count
+  if (args.length < count || (!variadic && args.length > maxCount)) throw new CalcError("bad argument count")
   for (var i = 0; i < args.length; i++) if (args[i].type !== "num") throw new CalcError("expected a number")
-  if (name === "round" && args.length === 2 && (args[1].unit || args[1].pct || Math.floor(args[1].n) !== args[1].n || Math.abs(args[1].n) > 308)) throw new CalcError("bad precision")
-  if (name === "log" && (args[0].n <= 0 || (args.length === 2 && (args[1].n <= 0 || args[1].n === 1)))) throw new CalcError("bad logarithm")
+  if (name === "round" && args.length === 2) {
+    var precision = args[1]
+    if (precision.unit || precision.pct || Math.floor(precision.n) !== precision.n || Math.abs(precision.n) > 308) throw new CalcError("bad precision")
+  }
+  if (name === "log") {
+    if (args[0].n <= 0) throw new CalcError("bad logarithm")
+    if (args.length === 2 && (args[1].n <= 0 || args[1].n === 1)) throw new CalcError("bad logarithm")
+  }
   if (TRIG[name]) {
     var a = args[0]
     var rad = a.unit ? (dimsKey(a.unit.dims) === "A1" ? toBase(a.n, a.unit) : NaN) : a.n
@@ -1067,7 +1078,9 @@ Parser.prototype.parsePrimary = function() {
     this.i++
     if (unixLen) {
       this.i += unixLen - 1
-      if ((this.peek() && this.peek().t === "num" && !this.peek().base) || ((this.isOp("-") || this.isOp("+")) && this.peek(1) && this.peek(1).t === "num")) {
+      var unsignedStamp = this.peek() && this.peek().t === "num" && !this.peek().base
+      var signedStamp = (this.isOp("-") || this.isOp("+")) && this.peek(1) && this.peek(1).t === "num"
+      if (unsignedStamp || signedStamp) {
         this.state.ops++
         this.state.fromUnix = true
         var stamp = this.parseUnary()
