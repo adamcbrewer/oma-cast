@@ -39,7 +39,7 @@ Item {
   readonly property bool loading: menuSource.loading || agentLauncher.checking || nativeSearch.pending !== null
   // Bumped when exchange rates or zone offsets arrive, so an open
   // calculator row re-evaluates.
-  readonly property int calculatorRevision: (calculatorData.rates ? 1 : 0) + calculatorData.ratesFetchedAt + calculatorData.zonesAt
+  readonly property double calculatorRevision: calculatorData.ratesRevision + calculatorData.zonesAt + (backend.config.currencyRates ? 0 : 1)
 
   signal notification(string method, var data)
 
@@ -520,6 +520,7 @@ Item {
           base: r ? r.base : null,
           currencies: r ? Object.keys(r.rates).concat([r.base]).sort() : [],
           fetchedAt: calculatorData.ratesFetchedAt || null,
+          provider: "Frankfurter",
           zones: Object.keys(calculatorData.zones).length
         }
       }
