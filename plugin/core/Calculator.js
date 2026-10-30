@@ -541,6 +541,7 @@ function compound(a, b, sign, preserve) {
 }
 
 function unitPow(u, p) {
+  if (u.offset) throw new CalcError("affine unit")
   var d = dimsScale(u.dims, p)
   var preferred = preferredUnit(d, u.atoms || [u])
   var factor = Math.pow(unitFactor(u), p)
@@ -791,19 +792,22 @@ Parser.prototype.parseUnit = function(afterNumber) {
 }
 
 Parser.prototype.unitExponent = function(unit, scale) {
-  var exponent = null
-  if (this.isOp("^")) {
-    this.i++
-    var sign = 1
-    if (this.isOp("-") || this.isOp("+")) sign = this.next().v === "-" ? -1 : 1
-    var token = this.next()
-    if (!token || token.t !== "num") throw new CalcError("bad unit exponent")
-    exponent = sign * token.v
-  } else if (this.isOp("²") || this.isOp("³")) exponent = this.next().v === "²" ? 2 : 3
-  if (exponent === null) return { unit: unit, scale: scale }
-  if (!isFinite(exponent) || Math.floor(exponent) !== exponent) throw new CalcError("bad unit exponent")
-  var p = unitPow(unit, exponent)
-  return { unit: p.unit, scale: Math.pow(scale, exponent) * p.scale }
+  for (;;) {
+    var exponent = null
+    if (this.isOp("^")) {
+      this.i++
+      var sign = 1
+      if (this.isOp("-") || this.isOp("+")) sign = this.next().v === "-" ? -1 : 1
+      var token = this.next()
+      if (!token || token.t !== "num") throw new CalcError("bad unit exponent")
+      exponent = sign * token.v
+    } else if (this.isOp("²") || this.isOp("³")) exponent = this.next().v === "²" ? 2 : 3
+    if (exponent === null) return { unit: unit, scale: scale }
+    if (!isFinite(exponent) || Math.floor(exponent) !== exponent) throw new CalcError("bad unit exponent")
+    var p = unitPow(unit, exponent)
+    unit = p.unit
+    scale = Math.pow(scale, exponent) * p.scale
+  }
 }
 
 Parser.prototype.continueUnit = function(unit, scale) {
@@ -1229,7 +1233,8 @@ function trimNumber(x) {
 
 // A measured quantity: 4 decimals, or 4 significant digits below 1. [D]
 function trimMeasure(x) {
-  if ((Math.abs(x) >= 1 && Math.abs(x) < 1e300) || x === 0) return trimNumber(Math.round(x * 1e4) / 1e4)
+  if (Math.abs(x) >= 1e300) return trimNumber(x)
+  if (Math.abs(x) >= 1 || x === 0) return trimNumber(Math.round(x * 1e4) / 1e4)
   return trimNumber(Number(x.toPrecision(4)))
 }
 

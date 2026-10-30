@@ -103,6 +103,7 @@ test("units keep dimensions through powers, products and explicit targets", () =
     ["5 kW*3 h", 15, "kWh"], ["10 m/s^2*2 s", 20, "m/s"],
     ["10 m/s²*2 s to m/s", 20, "m/s"], ["1 kg/m^3*1 m3", 1, "kg"],
     ["10 m/s to cm/s", 1000, "cm/s"], ["10 m/s to m/min", 600, "m/min"],
+    ["2 m^2^2 to m^4", 2, "m^4"], ["2m²² to m^4", 2, "m^4"],
     ["(2 m)^0", 1, ""], ["min(1 m,2 cm)", 0.02, "m"], ["round(1.234 m,2)", 1.23, "m"],
     ["32 °F to °C", 0, "°C"], ["0 °C to K", 273.15, "K"],
     ["1 GiB to MB", 1073.741824, "MB"], ["(2 cm)^-2 to m^-2", 2500, "m^-2"], ["1e305 m+1e305 m", 2e305, "m"]
@@ -110,7 +111,7 @@ test("units keep dimensions through powers, products and explicit targets", () =
     const r = value(q, n, env, 1e-12)
     assert.equal(r.copy.split(" ").slice(1).join(" "), unit, q)
   }
-  reject(["5 m+2 s", "5 kg to cm", "5 m to kg", "(2 m)^0.5", "1 m^1.5+0 m", "20 °C*2 m", "1 cm^1000+1 m", "1 km^1000+1 m"])
+  reject(["5 m+2 s", "5 kg to cm", "5 m to kg", "(2 m)^0.5", "1 m^1.5+0 m", "20 °C*2 m", "2 °C^-1 to K^-1", "2 °C^-1*2 K", "2 °C^2 to K^2", "2 °F^-1*2 K", "1 cm^1000+1 m", "1 km^1000+1 m"])
 })
 
 test("existing mixed plain/unit and absolute-temperature rules", () => {
@@ -194,6 +195,9 @@ test("display rounding, captions and copied text are separate contracts", () => 
   assert.equal(decimal.result, "0.3")
   assert.equal(decimal.copy, "0.3")
   assert.equal(decimal.value, 0.1 + 0.2)
+  const large = C.evaluate("1.23456789012e300 m+0 m", env)
+  assert.equal(large.result, "1.23456789012e300 m")
+  assert.equal(large.copy, "1.23456789012e300 m")
   const measured = C.evaluate("1 GiB to MB", env)
   assert.equal(measured.result, "1,073.7418 MB")
   assert.equal(measured.copy, "1073.7418 MB")
