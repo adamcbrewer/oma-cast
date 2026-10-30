@@ -115,8 +115,12 @@ Item {
   }
 
   onRatesEnabledChanged: {
-    if (!data.ratesEnabled) { data.cancelRates(); data.ratesTriedAt = 0 }
-    else data.refresh()
+    if (data.ratesEnabled) {
+      data.refresh()
+    } else {
+      data.cancelRates()
+      data.ratesTriedAt = 0
+    }
   }
   Component.onDestruction: data.cancelRates()
 

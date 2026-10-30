@@ -521,8 +521,10 @@ function convert(value, unit, explicit, state) {
 function compound(a, b, sign, preserve) {
   var d = dimsCombine(a.dims, b.dims, sign)
   var ac = currencyCode(a), bc = currencyCode(b)
+  var money = ac || bc
   if (ac && bc && ac !== bc) throw new CalcError("convert currencies explicitly")
-  if ((ac || bc) && ((sign > 0 && ac && bc) || (d.C && d.C !== 1))) throw new CalcError("unsupported money dimension")
+  if (sign > 0 && ac && bc) throw new CalcError("unsupported money dimension")
+  if (money && d.C && d.C !== 1) throw new CalcError("unsupported money dimension")
   var factor = sign > 0 ? unitFactor(a) * unitFactor(b) : unitFactor(a) / unitFactor(b)
   if (isEmptyDims(d)) return { scalar: factor }
   var sym = a.sym + (sign > 0 ? "·" : "/") + b.sym
@@ -531,7 +533,7 @@ function compound(a, b, sign, preserve) {
   var atoms = (a.atoms || []).concat(b.atoms || [])
   var preferred = preserve ? null : preferredUnit(d, atoms)
   if (preferred) return { unit: preferred, scale: factor / unitFactor(preferred) }
-  return { unit: { sym: sym, name: sym, plural: sym, dims: d, factor: factor, offset: 0, long: false, currency: "", money: d.C ? ac || bc : "", hint: "", atoms: atoms }, scale: 1 }
+  return { unit: { sym: sym, name: sym, plural: sym, dims: d, factor: factor, offset: 0, long: false, currency: "", money: d.C ? money : "", hint: "", atoms: atoms }, scale: 1 }
 }
 
 function unitPow(u, p) {
