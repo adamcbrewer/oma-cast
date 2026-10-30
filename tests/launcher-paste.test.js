@@ -25,7 +25,7 @@ function harness(text) {
     rebuild: reset => changes.push(reset), isTyping: () => false,
     isActionPanelKey: () => false, direction: () => 0
   }
-  const actionPanel = { filter: "" }
+  const actionPanel = { item: { filter: "" } }
   let cursor = window.query.length
   const queryText = {
     selectionStart: cursor, selectionEnd: cursor,
@@ -120,9 +120,9 @@ test("query paste inserts at the cursor and replaces the selected text", () => {
 test("action-panel paste edits its filter without changing the query", () => {
   const h = harness("Copy\nResult")
   h.window.actionPanelOpen = true
-  h.actionPanel.filter = "Find "
+  h.actionPanel.item.filter = "Find "
   h.press("V", h.Qt.ControlModifier)
-  assert.equal(h.actionPanel.filter, "Find Copy Result")
+  assert.equal(h.actionPanel.item.filter, "Find Copy Result")
   assert.equal(h.window.query, "prefix ")
   assert.deepEqual(h.changes, [])
 })

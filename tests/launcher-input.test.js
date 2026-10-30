@@ -147,6 +147,22 @@ test("aliases keep native editing while rejecting spaces", () => {
   assert.equal(h.press("Space", 0, " "), true)
 })
 
+test("hiding resets input composition and cancels pending search results", () => {
+  const events = []
+  const window = {
+    shown: false, searchSerial: 5, searchPending: true,
+    backend: { cancelSearch: () => events.push("cancel") },
+    closePopups: () => events.push("close-popups"),
+    general: { popToRootTimeout: 90 }
+  }
+  const popTimer = { restart: () => events.push("timer") }
+  const Qt = { inputMethod: { reset: () => events.push("reset-input") } }
+  vm.runInNewContext(body("onShownChanged:"), { window, Qt, popTimer })
+  assert.equal(window.searchSerial, 6)
+  assert.equal(window.searchPending, false)
+  assert.deepEqual(events, ["reset-input", "cancel", "close-popups", "timer"])
+})
+
 test("native query input regression tests", t => {
   const runner = process.env.QMLTESTRUNNER || "/usr/lib/qt6/bin/qmltestrunner"
   const result = spawnSync(runner, ["-input", path.join(__dirname, "qml")], {
