@@ -637,8 +637,8 @@ function power(a, b, state) {
   if (a.type !== "num" || b.type !== "num" || b.unit || b.pct) throw new CalcError("bad power")
   if (a.unit) {
     if (Math.floor(b.n) !== b.n || a.unit.offset) throw new CalcError("bad unit power")
-    if (b.n === 0) return num(1)
     var p = unitPow(a.unit, b.n)
+    if (b.n === 0) return num(1)
     return num(Math.pow(a.n, b.n) * p.scale, p.unit)
   }
   return num(Math.pow(a.n, b.n))
