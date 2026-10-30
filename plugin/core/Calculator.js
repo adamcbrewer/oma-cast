@@ -1010,7 +1010,7 @@ Parser.prototype.parsePrimary = function() {
   }
 
   if (t.t === "cur") {
-    var amount = this.parsePostfix()
+    var amount = this.parsePrimary()
     if (amount.type !== "num" || amount.unit || amount.pct) throw new CalcError("bad amount")
     var per = this.continueUnit(UNITS[t.v], 1)     // "$30/h"
     return num(amount.n * per.scale, per.unit)

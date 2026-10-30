@@ -74,6 +74,10 @@ test("currency syntax, output and quote provenance remain explicit", () => {
   for (const [symbol, code] of Object.entries({ $: "USD", "€": "EUR", "£": "GBP", "¥": "JPY", "₹": "INR", "₩": "KRW", "₺": "TRY", "₪": "ILS" })) {
     assert.equal(value(`${symbol}10 / 5 ${code}`)?.value, 2, symbol)
     assert.equal(value(`${symbol}10`), null)
+    for (const postfix of ["²", "³", "!", "^2"]) assert.equal(value(`${symbol}10${postfix}`), null)
+    assert.equal(value(`${symbol}(2+3)`)?.value, 5)
+    assert.equal(value(`${symbol}(10²)`)?.value, 100)
+    assert.equal(value(`${symbol}30/h*8 h`)?.value, 240)
   }
   assert.equal(value("1234 GBP+0 GBP")?.result, "£1,234.00")
   assert.equal(value("1234 GBP+0 GBP")?.copy, "£1234.00")

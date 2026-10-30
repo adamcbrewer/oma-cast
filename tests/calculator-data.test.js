@@ -6,18 +6,20 @@ const vm = require("node:vm")
 const os = require("node:os")
 const { spawnSync } = require("node:child_process")
 const C = require("../plugin/core/Calculator.js")
+const Schema = require("../plugin/core/Schema.js")
 
 const source = fs.readFileSync(path.join(__dirname, "../plugin/services/CalculatorData.qml"), "utf8")
+const backendSource = fs.readFileSync(path.join(__dirname, "../plugin/Backend.qml"), "utf8")
 const NOW = Date.UTC(2026, 9, 30, 12)
 const quote = { base: "EUR", date: "2026-10-29", rates: { USD: 2, GBP: 0.5 } }
 
-function block(signature, indentation) {
-  const start = source.indexOf(signature)
+function block(signature, indentation, text = source) {
+  const start = text.indexOf(signature)
   assert.ok(start >= 0, signature)
-  const open = source.indexOf("{", start)
-  const end = source.indexOf("\n" + " ".repeat(indentation) + "}", open)
+  const open = text.indexOf("{", start)
+  const end = text.indexOf("\n" + " ".repeat(indentation) + "}", open)
   assert.ok(end > open, signature)
-  return source.slice(open, end + indentation + 2)
+  return text.slice(open, end + indentation + 2)
 }
 
 function harness() {
@@ -232,10 +234,9 @@ test("synchronous request failures release the in-flight guard and keep retries 
 })
 
 test("backend disabling hides cached exchange data but leaves same-currency maths available", () => {
-  const backendSource = fs.readFileSync(path.join(__dirname, "../plugin/Backend.qml"), "utf8")
   const start = backendSource.indexOf("  function calculatorEnv()")
   const end = backendSource.indexOf("\n  }", start)
-  const backend = { config: { currencyRates: true }, hour12: false }
+  const backend = { config: { currencyRates: true }, configLoaded: true, hour12: false }
   const calculatorData = { rates: quote, zones: {}, ratesRevision: 1, zonesAt: NOW }
   const context = vm.createContext({ backend, calculatorData })
   vm.runInContext(backendSource.slice(start, end + 4), context)
@@ -247,6 +248,34 @@ test("backend disabling hides cached exchange data but leaves same-currency math
   const disabledRevision = vm.runInContext(binding, context)
   backend.config.currencyRates = true
   assert.notEqual(vm.runInContext(binding, context), disabledRevision)
+  backend.configLoaded = false
+  assert.equal(C.evaluate("10 USD to GBP", context.calculatorEnv()), null)
+  assert.equal(vm.runInContext(binding, context), disabledRevision)
+})
+
+test("initial config/cache ordering cannot send requests before the saved preference is known", () => {
+  const configSource = backendSource.slice(backendSource.lastIndexOf("  FileView {"))
+  const ratesEnabled = backendSource.match(/    ratesEnabled: ([^\n]+)/)[1]
+  for (const cacheFirst of [false, true]) {
+    for (const saved of [{ currencyRates: false }, { currencyRates: true }, null, "malformed"]) {
+      const h = harness()
+      const backend = { config: Schema.withConfigDefaults(null), configLoaded: false, directoriesReady: true, log() {} }
+      const context = vm.createContext({ backend, Schema, text: () => saved === "malformed" ? "{" : JSON.stringify(saved), path: "/fake/config.json" })
+      const sync = () => h.enable(vm.runInContext(ratesEnabled, context))
+      sync()
+      assert.equal(h.data.ratesEnabled, false)
+      if (cacheFirst) {
+        h.missing()
+        assert.equal(h.requests.length, 0)
+      }
+      const handler = saved === null ? "    onLoadFailed: {" : "    onLoaded: {"
+      vm.runInContext("(function() " + block(handler, 4, configSource) + ")()", context)
+      sync()
+      if (!cacheFirst) h.missing()
+      assert.equal(backend.configLoaded, true)
+      assert.equal(h.requests.length, saved?.currencyRates === false ? 0 : 1)
+    }
+  }
 })
 
 test("real QML imports the rate service, reads a cache and runs currency calculations offline", { skip: !process.env.OMA_CAST_QML_RUNNER }, t => {
